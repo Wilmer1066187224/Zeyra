@@ -8,8 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 class Devolucion extends Model
 {
     use HasFactory;
+protected $table = 'devoluciones';
+    protected $fillable = [
+    'venta_id',
+    'producto_devuelto_id',
+    'producto_nuevo_id',
+    'cantidad',
+    'motivo',
+];
 
-    // Devolucion.php
+
         public function venta()
         {
             return $this->belongsTo(Venta::class);
@@ -17,5 +25,12 @@ class Devolucion extends Model
         public function producto()
         {
             return $this->belongsTo(Producto::class);
+        }
+        public function productoDevuelto() {
+            return $this->belongsTo(Producto::class, 'producto_devuelto_id');
+        }
+
+        public function productoNuevo() {
+            return $this->belongsTo(Producto::class, 'producto_nuevo_id');
         }
 }

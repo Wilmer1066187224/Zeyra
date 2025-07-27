@@ -9,7 +9,7 @@ class Factura extends Model
 {
     use HasFactory;
 
-    
+    protected $fillable = ['venta_id', 'numero'];
     // Factura.php
     public function venta()
     {

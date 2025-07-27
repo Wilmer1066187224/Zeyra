@@ -57,7 +57,8 @@ class ClienteController extends Controller
      */
     public function edit(string $id)
     {
-        //
+        $cliente = Cliente::findOrFail($id);
+        return view ('clientes.edit', compact('cliente'));
     }
 
     /**
@@ -65,7 +66,16 @@ class ClienteController extends Controller
      */
     public function update(Request $request, string $id)
     {
-        //
+        $request->validate([
+        'nombre' => 'required|string|max:255',
+        'email' => 'nullable|email',
+        'telefono' => 'nullable|string|max:20',
+        'direccion' => 'nullable|string|max:255',
+    ]);
+        $cliente = Cliente::findOrFail($id);
+        $cliente->update($request->all());
+
+        return redirect()->route('clientes.index')->with('swal_update', 'Cliente actualizado correctamente.');
     }
 
     /**
@@ -73,6 +83,12 @@ class ClienteController extends Controller
      */
     public function destroy(string $id)
     {
-        //
-    }
+
+    $cliente = Cliente::findOrFail($id);
+    $cliente->delete();
+
+    return redirect()->route('clientes.index')->with('swal_delete', 'Cliente eliminado correctamente.');
+}
+
+    
 }

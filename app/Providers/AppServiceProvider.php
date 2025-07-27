@@ -1,6 +1,8 @@
 <?php
 
 namespace App\Providers;
+use Illuminate\Support\Facades\View;
+use Illuminate\Support\Facades\Auth;
 
 use Illuminate\Support\ServiceProvider;
 
@@ -19,6 +21,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+          View::composer('*', function ($view) {
+        $notificaciones = Auth::check() ? Auth::user()->unreadNotifications : collect();
+        $view->with('notificaciones', $notificaciones);
+    });
     }
 }

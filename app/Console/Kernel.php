@@ -4,6 +4,8 @@ namespace App\Console;
 
 use Illuminate\Console\Scheduling\Schedule;
 use Illuminate\Foundation\Console\Kernel as ConsoleKernel;
+use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Log;
 
 class Kernel extends ConsoleKernel
 {
@@ -12,7 +14,11 @@ class Kernel extends ConsoleKernel
      */
     protected function schedule(Schedule $schedule): void
     {
-        // $schedule->command('inspire')->hourly();
+       // Ejecuta el backup todos los días a las 12:00 AM
+    $schedule->command('backup:run')->dailyAt('05:00')->appendOutputTo(storage_path('logs/backup.log'));
+
+    // Opcional: para probarlo más rápido, puedes usar cada minuto:
+    // $schedule->command('backup:run')->everyMinute();
     }
 
     /**

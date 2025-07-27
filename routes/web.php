@@ -8,10 +8,12 @@ use App\Http\Controllers\CompraController;
 use App\Http\Controllers\ClienteController;
 use App\Http\Controllers\VentaController;
 use App\Http\Controllers\ReporteController;
+use App\Http\Controllers\AbonoController;
 use App\Http\Controllers\ReporteCompraController;
 use App\Http\Controllers\Admin\UserRoleController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
+use App\Http\Controllers\DevolucionController;
 
 
 /*
@@ -39,8 +41,15 @@ Route::resource('productos', ProductoController::class)->middleware(['auth']);
 Route::resource('categorias', CategoriaController::class)->middleware(['auth']);
 Route::resource('movimientos', MovimientoController::class)->middleware(['auth']);
 Route::resource('compras', CompraController::class)->middleware(['auth']);
+
 Route::resource('ventas', VentaController::class)->middleware(['auth']);
+Route::get('/ventas/{venta}/factura',[VentaController::class, 'generarFactura'])->name('ventas.factura');// web.php
+Route::get('/ventas/{venta}', [VentaController::class, 'show'])->name('ventas.show');
+
+
+
 Route::get('/reportes/inventario', [ReporteController::class, 'inventario'])->name('reportes.inventario');
+
 Route::get('/reporte-compras', [ReporteController::class, 'descargarReporte'])->name('reporte.compras');
 Route::get('/compras/pdf/{id}', [ReporteCompraController::class, 'generarPDF'])->name('compras.pdf');
 Route::resource('clientes',ClienteController::class)->middleware(['auth']);
@@ -69,6 +78,14 @@ Route::post('/notificaciones/{id}/leida', function ($id, Request $request) {
     return back();
 })->middleware('auth')->name('notificaciones.marcarLeida');
 Route::view('/notificaciones', 'notificaciones.index')->middleware('auth');
+
+Route::get('/devoluciones/crear', [DevolucionController::class, 'create'])->name('devoluciones.create');
+Route::post('/devoluciones', [DevolucionController::class, 'store'])->name('devoluciones.store');
+Route::get('/devoluciones', [DevolucionController::class, 'index'])->name('devoluciones.index');
+Route::post('/abonos', [AbonoController::class, 'store'])->name('abonos.store');
+
+
+
 
 
 

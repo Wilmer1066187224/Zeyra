@@ -67,6 +67,15 @@
         </ul>
     </div>
 @endif
+<!-- Tarjeta de Devoluciones -->
+<a href="{{ route('devoluciones.index') }}" class="bg-white border border-gray-200 rounded-2xl shadow hover:shadow-lg transition p-6 text-center hover:bg-pink-50">
+    <div class="text-4xl mb-2">♻️</div>
+    <h3 class="text-lg font-semibold text-gray-800">Devoluciones</h3>
+    <p class="text-sm text-gray-500">Ver y registrar devoluciones</p>
+</a>
+
+
+
 
     </div>
 </x-app-layout>

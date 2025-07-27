@@ -41,5 +41,20 @@ class Venta extends Model
     {
         return $this->hasMany(Devolucion::class);
     }
+        public function abonos()
+    {
+        return $this->hasMany(Abono::class);
+    }
 
-}
+    public function getTotalAbonadoAttribute()
+    {
+        return $this->abonos()->sum('monto');
+    }
+
+    public function getSaldoPendienteAttribute()
+    {
+        return $this->total - $this->total_abonado;
+    }
+
+
+    }

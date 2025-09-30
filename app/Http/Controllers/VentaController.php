@@ -2,209 +2,202 @@
 
 namespace App\Http\Controllers;
 
-
 use App\Models\Producto;
 use App\Models\Cliente;
 use App\Models\Venta;
+use App\Models\Factura;
 use Illuminate\Http\Request;
-use App\Notifications\StockBajoNotification;
-use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\DB;
 use LaravelDaily\Invoices\Invoice;
 use LaravelDaily\Invoices\Classes\Buyer;
 use LaravelDaily\Invoices\Classes\InvoiceItem;
-use Carbon\Carbon;
 use LaravelDaily\Invoices\Classes\Party;
-use App\Models\Factura;
-
-
+use Carbon\Carbon;
+use App\Models\VentaDetalle;
 class VentaController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * Listar ventas con filtros.
      */
-  public function index(Request $request){
-    $query = Venta::with(['producto', 'cliente'])->latest('fecha_venta');
+    public function index(Request $request)
+    {
+        $query = Venta::with(['detalles.producto', 'cliente'])->latest('fecha_venta');
 
-    if ($request->filled('cliente')) {
-        $query->whereHas('cliente', function ($q) use ($request) {
-            $q->where('nombre', 'like', '%' . $request->cliente . '%');
-        });
+        if ($request->filled('cliente')) {
+            $query->whereHas('cliente', function ($q) use ($request) {
+                $q->where('nombre', 'like', '%' . $request->cliente . '%');
+            });
+        }
+
+        if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+            $query->whereBetween('fecha_venta', [
+                $request->fecha_inicio . ' 00:00:00',
+                $request->fecha_fin . ' 23:59:59'
+            ]);
+        } elseif ($request->filled('fecha_inicio')) {
+            $query->whereDate('fecha_venta', '>=', $request->fecha_inicio);
+        } elseif ($request->filled('fecha_fin')) {
+            $query->whereDate('fecha_venta', '<=', $request->fecha_fin);
+        }
+
+        $ventas = $query->paginate(10)->appends($request->all());
+
+        return view('ventas.index', compact('ventas'));
     }
 
-    $ventas = $query->get();
-
-    return view('ventas.index', compact('ventas'));
-}
-
-
     /**
-     * Show the form for creating a new resource.
+     * Formulario para crear una nueva venta.
      */
-    public function create(){
-
+    public function create()
+    {
         $clientes = Cliente::all();
         $productos = Producto::all();
         return view('ventas.create', compact('clientes', 'productos'));
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Guardar una nueva venta con múltiples productos.
      */
-  public function store(Request $request){
-    $request->validate([
-        'cliente_id' => 'required|exists:clientes,id', // <- nuevo
-        'producto_id' => 'required|exists:productos,id',
-        'cantidad' => 'required|integer|min:1',
-        'precio_unitario' => 'required|numeric|min:0',
-        'fecha_venta' => 'required|date',
-    ]);
-
-    $producto = Producto::findOrFail($request->producto_id);
-
-    if ($producto->stock < $request->cantidad) {
-        return back()->withErrors(['cantidad' => 'No hay suficiente stock disponible.']);
-    }
-
-    $total = $request->cantidad * $request->precio_unitario;
-
-    $venta = Venta::create([
-        'cliente_id' => $request->cliente_id, // <- nuevo
-        'producto_id' => $request->producto_id,
-        'cantidad' => $request->cantidad,
-        'precio_unitario' => $request->precio_unitario,
-        'total' => $total,
-        'fecha_venta' => $request->fecha_venta,
-    ]);
-
-    $producto->decrement('stock', $request->cantidad);
-           
-    // 🚨 Verificar y notificar si el stock está por debajo del mínimo
-    if ($producto->stock <= $producto->stock_minimo) {
-        auth()->user()->notify(new StockBajoNotification($producto));
-    }
-
-    return redirect()->route('ventas.index')->with('swal', 'Venta registrada correctamente.');
-}
-
-
-
-    /**
-     * Display the specified resource.
-     */
-   public function show(Venta $venta)
+public function store(Request $request)
 {
-    return view('ventas.show', compact('venta'));
-}
+    // Validación de los datos
+    $request->validate([
+        'cliente_id' => 'required|exists:clientes,id',
+        'fecha_venta' => 'required|date',
+        'productos.*.producto_id' => 'required|exists:productos,id',
+        'productos.*.cantidad' => 'required|numeric|min:1',
+        'productos.*.precio_unitario' => 'required|numeric|min:0',
+    ]);
 
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(string $id)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(Request $request, string $id)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Venta $venta){
-    // Validar que la venta tenga producto asociado
-    if ($venta->producto) {
-        // Devolver el stock vendido al producto
-        $venta->producto->increment('stock', $venta->cantidad);
-    }
-
-    // Eliminar la venta
-    $venta->delete();
-
-    return redirect()->route('ventas.index')->with('swal_delete', 'Venta eliminada correctamente.');
-}
-
-public function generarFactura(Venta $venta){
-    // Verifica si ya se generó factura
-    $factura = Factura::where('venta_id', $venta->id)->first();
-    $venta = Venta::with('abonos')->findOrFail($venta->id);
-
-   $totalAbonado = $venta->abonos->sum('monto');
-   $saldoPendiente = $venta->total - $totalAbonado;
-
-    if (!$factura) {
-        $numeroFactura = $this->generarNumeroFactura();
-
-        $factura = Factura::create([
-            'venta_id' => $venta->id,
-            'numero' => $numeroFactura,
+    \DB::beginTransaction();
+    try {
+        // 1️⃣ Crear la venta
+        $venta = Venta::create([
+            'cliente_id' => $request->cliente_id,
+            'fecha_venta' => $request->fecha_venta,
+            'total' => 0, // se recalcula más adelante
         ]);
+
+        $totalGeneral = 0;
+
+        // 2️⃣ Guardar los productos en detalle_venta
+        foreach ($request->productos as $producto) {
+            $subtotal = $producto['cantidad'] * $producto['precio_unitario'];
+            $totalGeneral += $subtotal;
+
+            VentaDetalle::create([
+                'venta_id' => $venta->id,
+                'producto_id' => $producto['producto_id'],
+                'cantidad' => $producto['cantidad'],
+                'precio_unitario' => $producto['precio_unitario'],
+                'subtotal' => $subtotal, // ✅ ahora sí coincide con la BD
+            ]);
+
+            // 🔄 Descontar del inventario (opcional)
+            Producto::where('id', $producto['producto_id'])
+                ->decrement('stock', $producto['cantidad']);
+        }
+
+        // 3️⃣ Actualizar total de la venta
+        $venta->update(['total' => $totalGeneral]);
+
+        \DB::commit();
+
+        return redirect()->route('ventas.index')->with('success', 'Venta registrada correctamente ✅');
+    } catch (\Exception $e) {
+        \DB::rollBack();
+        return back()->with('error', 'Error al registrar la venta: ' . $e->getMessage());
     }
-
-    $cliente = $venta->cliente;
-    $producto = $venta->producto;
-
-    $customer = new Buyer([
-        'name' => $cliente->nombre,
-        'custom_fields' => [
-            'Email' => $cliente->email,
-            'Teléfono' => $cliente->telefono,
-            'Dirección' => $cliente->direccion,
-        ],
-    ]);
-
-    $seller = new Party([
-        'name' => 'Tu Empresa o Negocio',
-        'custom_fields' => [
-            'NIT' => '123456789-0',
-            'Dirección' => 'Chinú, Córdoba',
-            'Teléfono' => '300 123 4567',
-        ]
-    ]);
-
-    $item = InvoiceItem::make($producto->nombre)
-        ->pricePerUnit($venta->precio_unitario)
-        ->quantity($venta->cantidad)
-        ->units('und');
-
-   $invoice = Invoice::make()
-    ->series($factura->numero)
-    ->serialNumberFormat('{SERIES}')
-    ->buyer($customer)
-    ->seller($seller)
-    ->date(Carbon::parse($venta->fecha_venta))
-    ->addItem($item)
-    ->logo(public_path('vendor/invoices/sample-logo.png'))
-    ->template('default') // Usa la vista resources/views/vendor/invoices/default.blade.php
-    ->filename('Factura_' . Carbon::parse($venta->fecha_venta)->format('d-m-Y') . '_#' . $venta->id)
-    ->notes('Gracias por su compra.')
-    ->currencySymbol('$')
-    ->currencyCode('COP')
-    ->currencyFormat('{SYMBOL} {VALUE}')
-    ->currencyThousandsSeparator('.')
-    ->currencyDecimalPoint(',');
-
-// Añadir venta al objeto
-$invoice->venta = $venta;
-
-return $invoice->stream();
-
 }
 
 
-            private function generarNumeroFactura()
-            {
-                $ultimo = Factura::latest('id')->first();
-                $numero = $ultimo ? (int) substr($ultimo->numero, -4) + 1 : 1;
-                return 'FAC-' . str_pad($numero, 4, '0', STR_PAD_LEFT); // Ej: FAC-0005
-            }
 
 
+    /**
+     * Ver detalle de una venta.
+     */
+    public function show(Venta $venta)
+    {
+        return view('ventas.show', compact('venta'));
+    }
 
+    /**
+     * Generar factura en PDF.
+     */
+    public function generarFactura(Venta $venta)
+    {
+        $factura = Factura::where('venta_id', $venta->id)->first();
+        $venta = Venta::with(['detalles.producto', 'abonos'])->findOrFail($venta->id);
 
+        $totalAbonado = $venta->abonos->sum('monto');
+        $saldoPendiente = $venta->total - $totalAbonado;
+
+        if (!$factura) {
+            $numeroFactura = $this->generarNumeroFactura();
+
+            $factura = Factura::create([
+                'venta_id' => $venta->id,
+                'numero'   => $numeroFactura,
+            ]);
+        }
+
+        $cliente = $venta->cliente;
+
+        $customer = new Buyer([
+            'name' => $cliente->nombre,
+            'custom_fields' => [
+                'Email'     => $cliente->email,
+                'Teléfono'  => $cliente->telefono,
+                'Dirección' => $cliente->direccion,
+            ],
+        ]);
+
+        $seller = new Party([
+            'name' => 'Tu Empresa o Negocio',
+            'custom_fields' => [
+                'NIT'       => '123456789-0',
+                'Dirección' => 'Chinú, Córdoba',
+                'Teléfono'  => '300 123 4567',
+            ]
+        ]);
+
+        $items = [];
+        foreach ($venta->detalles as $detalle) {
+            $items[] = InvoiceItem::make($detalle->producto->nombre)
+                ->pricePerUnit($detalle->precio_unitario)
+                ->quantity($detalle->cantidad)
+                ->units('und');
+        }
+
+        $invoice = Invoice::make()
+            ->series($factura->numero)
+            ->serialNumberFormat('{SERIES}')
+            ->buyer($customer)
+            ->seller($seller)
+            ->date(Carbon::parse($venta->fecha_venta))
+            ->addItems($items)
+            ->logo(public_path('vendor/invoices/sample-logo.png'))
+            ->template('default')
+            ->filename('Factura_' . Carbon::parse($venta->fecha_venta)->format('d-m-Y') . '_#' . $venta->id)
+            ->notes("Gracias por su compra.\nSaldo pendiente: $saldoPendiente")
+            ->currencySymbol('$')
+            ->currencyCode('COP')
+            ->currencyFormat('{SYMBOL} {VALUE}')
+            ->currencyThousandsSeparator('.')
+            ->currencyDecimalPoint(',');
+
+        $invoice->venta = $venta;
+
+        return $invoice->stream();
+    }
+
+    /**
+     * Generar un nuevo número de factura.
+     */
+    private function generarNumeroFactura()
+    {
+        $ultimo = Factura::latest('id')->first();
+        $numero = $ultimo ? (int) substr($ultimo->numero, -4) + 1 : 1;
+        return 'FAC-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
+    }
 }

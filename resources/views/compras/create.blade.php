@@ -35,6 +35,19 @@
                 <input type="date" name="fecha_compra" id="fecha_compra" class="w-full border rounded p-2">
                 @error('fecha_compra') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
             </div>
+            
+
+            <div class="mb-4">
+    <label for="proveedor_id" class="block text-sm font-medium">Proveedor</label>
+    <select name="proveedor_id" id="proveedor_id" class="w-full border rounded p-2">
+        <option value="">Seleccione un proveedor</option>
+        @foreach($proveedores as $proveedor)
+            <option value="{{ $proveedor->id }}">{{ $proveedor->nombre }}</option>
+        @endforeach
+    </select>
+    @error('proveedor_id') <span class="text-red-500 text-sm">{{ $message }}</span> @enderror
+</div>
+
 
             <div class="flex justify-end space-x-2">
                 <a href="{{ route('compras.index') }}" class="px-4 py-2 bg-gray-500 text-white rounded">Cancelar</a>

@@ -2,41 +2,43 @@
 
 namespace App\Http\Controllers;
 
-
 use App\Models\Compra;
 use Carbon\Carbon;
-
+use LaravelDaily\Invoices\Classes\Party;
 use Illuminate\Http\Request;
 use LaravelDaily\Invoices\Invoice;
-use LaravelDaily\Invoices\Classes\Buyer;
 use LaravelDaily\Invoices\Classes\InvoiceItem;
 
 class ReporteCompraController extends Controller
 {
-  public function generarPDF($id)
+    public function generarPDF($id)
     {
-        $compra = Compra::with('producto')->findOrFail($id);
+        $compra = Compra::with(['producto','proveedor'])->findOrFail($id);
 
-        $cliente = new Buyer([
-            'name'          => 'Proveedor Genérico',
+        // ✅ Item de la compra
+        $item = InvoiceItem::make('Compra de: ' . $compra->producto->nombre)
+            ->pricePerUnit($compra->precio_unitario)
+            ->quantity($compra->cantidad);
+
+        // ✅ Datos del proveedor
+        $proveedor = new Party([
+            'name'          => $compra->proveedor->nombre,
             'custom_fields' => [
-                'Correo' => 'proveedor@email.com',
+                'Correo'    => $compra->proveedor->correo,
+                'Teléfono'  => $compra->proveedor->telefono,
+                'Dirección' => $compra->proveedor->direccion,
             ],
         ]);
 
-        $item = (new InvoiceItem())
-            ->title('Compra de: ' . $compra->producto->nombre)
-            ->pricePerUnit($compra->precio_unitario)
-            ->quantity($compra->cantidad)
-            ->discount(0);
-
+        // ✅ Construcción de la factura con el proveedor
         $invoice = Invoice::make()
-            ->buyer($cliente)
+            ->buyer($proveedor) // el proveedor aparece como "buyer"
             ->taxRate(0)
-            ->addItem($item)
-            ->status('Pagado')
+            ->status(__('Pagado'))
             ->date(Carbon::parse($compra->fecha_compra))
-            ->filename('compra_' . $compra->id);
+            ->filename('compra_' . $compra->id)
+            ->template('compras-template')
+            ->addItem($item); // 👈 AQUÍ lo agregamos
 
         return $invoice->stream();
     }

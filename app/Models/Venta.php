@@ -10,14 +10,14 @@ class Venta extends Model
     use HasFactory;
 
     protected $fillable = [
-        'producto_id',
         'cliente_id',
-        'cantidad',
-        'precio_unitario',
         'total',
         'fecha_venta',
+        'numero_factura', // 👈 nuevo
     ];
 
+
+  
    // Una venta pertenece a un producto
     public function producto()
     {
@@ -55,6 +55,13 @@ class Venta extends Model
     {
         return $this->total - $this->total_abonado;
     }
-
+//     public function detalle()
+// {
+//     return $this->hasMany(DetalleVenta::class);
+// }
+public function detalles()
+{
+    return $this->hasMany(VentaDetalle::class);
+}
 
     }

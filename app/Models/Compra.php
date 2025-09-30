@@ -11,6 +11,7 @@ class Compra extends Model
 
      protected $fillable = [
         'producto_id',
+        'proveedor_id', // 👈 agregar este
         'cantidad',
         'precio_unitario',
         'total',
@@ -21,4 +22,9 @@ class Compra extends Model
     {
         return $this->belongsTo(Producto::class);
     }
+
+    public function proveedor()
+{
+    return $this->belongsTo(Proveedor::class);
+}
 }

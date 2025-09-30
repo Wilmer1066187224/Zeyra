@@ -1,5 +1,6 @@
 <?php
-
+use App\Exports\VentasExport;
+use Maatwebsite\Excel\Facades\Excel;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProductoController;
 use App\Http\Controllers\CategoriaController;
@@ -14,6 +15,8 @@ use App\Http\Controllers\Admin\UserRoleController;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Http\Request;
 use App\Http\Controllers\DevolucionController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ProveedorController;
 
 
 /*
@@ -37,6 +40,13 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 
+
+Route::get('/dashboard', [DashboardController::class, 'index'])
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
+
+
+
 Route::resource('productos', ProductoController::class)->middleware(['auth']);
 Route::resource('categorias', CategoriaController::class)->middleware(['auth']);
 Route::resource('movimientos', MovimientoController::class)->middleware(['auth']);
@@ -47,11 +57,21 @@ Route::get('/ventas/{venta}/factura',[VentaController::class, 'generarFactura'])
 Route::get('/ventas/{venta}', [VentaController::class, 'show'])->name('ventas.show');
 
 
+Route::get('/ventas/export', function () {
+    return Excel::download(new VentasExport, 'ventas.xlsx');
+})->name('ventas.export');
+
 
 Route::get('/reportes/inventario', [ReporteController::class, 'inventario'])->name('reportes.inventario');
 
 Route::get('/reporte-compras', [ReporteController::class, 'descargarReporte'])->name('reporte.compras');
 Route::get('/compras/pdf/{id}', [ReporteCompraController::class, 'generarPDF'])->name('compras.pdf');
+
+Route::resource('proveedores', ProveedorController::class)
+    ->parameters(['proveedores' => 'proveedor']);
+
+
+
 Route::resource('clientes',ClienteController::class)->middleware(['auth']);
 
 

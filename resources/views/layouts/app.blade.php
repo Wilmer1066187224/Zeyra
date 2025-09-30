@@ -14,6 +14,8 @@
         <!-- SweetAlert2 CDN -->
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
         <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 
 
 
@@ -49,6 +51,38 @@
             text: '{{ session('stock_bajo') }}',
             confirmButtonText: 'Entendido',
             confirmButtonColor: '#f59e0b'
+        });
+    </script>
+@endif
+@if(session('success'))
+    <script>
+        Swal.fire({
+            icon: 'success',
+            title: '¡Éxito!',
+            text: '{{ session('success') }}',
+            confirmButtonText: 'Ok'
+        });
+    </script>
+@endif
+
+@if(session('update'))
+    <script>
+        Swal.fire({
+            icon: 'info',
+            title: '¡Actualizado!',
+            text: '{{ session('update') }}',
+            confirmButtonText: 'Ok'
+        });
+    </script>
+@endif
+
+@if(session('delete'))
+    <script>
+        Swal.fire({
+            icon: 'error',
+            title: '¡Eliminado!',
+            text: '{{ session('delete') }}',
+            confirmButtonText: 'Ok'
         });
     </script>
 @endif

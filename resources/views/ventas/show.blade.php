@@ -95,6 +95,13 @@
                     </div>
                 </div>
             @endif
+                     {{-- Botón Regresar --}}
+    <a href="{{ route('ventas.index') }}"
+       class="inline-flex items-center px-4 py-2 mt-6 bg-gray-600 text-white rounded shadow hover:bg-gray-700 transition">
+        <i class="fas fa-arrow-left mr-2"></i> Regresar
+    </a>
         </div>
+   
+
     </div>
 </x-app-layout>

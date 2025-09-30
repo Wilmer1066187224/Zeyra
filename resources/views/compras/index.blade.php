@@ -24,6 +24,7 @@
                     <th class="px-4 py-2">💰 Precio unitario</th>
                     <th class="px-4 py-2">💲 Total</th>
                     <th class="px-4 py-2">📅 Fecha</th>
+                    <th class="px-4 py-2">🏢 Proveedor</th>
                     <th class="px-4 py-2">⚙️ Acciones</th>
                 </tr>
             </thead>
@@ -35,11 +36,14 @@
                         <td class="px-4 py-2">$ {{ number_format($compra->precio_unitario, 2, ',', '.') }}</td>
                         <td class="px-4 py-2">$ {{ number_format($compra->total, 2, ',', '.') }}</td>
                         <td class="px-4 py-2">{{ $compra->fecha_compra }}</td>
+                        <td class="px-4 py-2">{{ $compra->proveedor->nombre ?? 'Sin proveedor' }}</td>
                         <td class="px-4 py-2 flex space-x-2">
     <a href="{{ route('compras.pdf', $compra->id) }}"
-       class="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 transition">
-       <i class="fas fa-file-pdf mr-1"></i> PDF
-    </a>
+   target="_blank"
+   class="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700 transition">
+   <i class="fas fa-file-pdf mr-1"></i> PDF
+</a>
+
 
     <form action="{{ route('compras.destroy', $compra) }}" method="POST" onsubmit="return confirm('¿Eliminar compra?')">
         @csrf

@@ -106,10 +106,10 @@
 
 <body>
 
-    {{-- LOGO --}}
-    @if($invoice->logo)
-        <img src="{{ $invoice->getLogo() }}" class="logo" alt="Logo">
-    @endif
+   {{-- LOGO --}}
+@if($invoice->logo)
+    <img src="{{ public_path('vendor/invoices/shoesandi-logo-removebg.png') }}" class="logo" alt="Logo Calzado">
+@endif
 
     <h1>Factura de Venta</h1>
 
@@ -117,7 +117,7 @@
     <div class="info-block">
         <div class="split-columns">
             <div>
-                <p><span class="label">Número:</span> {{ $invoice->getSerialNumber() }}</p>
+                <p><strong>N° Factura:</strong> {{ $venta->numero_factura }}</p>
                 <p><span class="label">Fecha:</span> {{ $invoice->getDate() }}</p>
             </div>
             <div class="text-right">
@@ -153,60 +153,120 @@
         </table>
     </div>
 
-    {{-- TABLA DE ITEMS --}}
-    <table class="table section">
-        <thead>
-            <tr>
-                <th>Descripción</th>
-                @if($invoice->hasItemUnits)
-                    <th>Unidad</th>
-                @endif
-                <th>Cantidad</th>
-                <th class="text-right">Precio Unitario</th>
-                <th class="text-right">Subtotal</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($invoice->items as $item)
-                <tr>
-                    <td>{{ $item->title }}</td>
-                    @if($invoice->hasItemUnits)
-                        <td>{{ $item->units }}</td>
-                    @endif
-                    <td>{{ $item->quantity }}</td>
-                    <td class="text-right">{{ $invoice->formatCurrency($item->price_per_unit) }}</td>
-                    <td class="text-right">{{ $invoice->formatCurrency($item->sub_total_price) }}</td>
-                </tr>
-            @endforeach
-
-            {{-- TOTAL --}}
-            <tr class="total-row">
-                <td colspan="{{ $invoice->table_columns - 1 }}" class="text-right">Total</td>
-                <td class="text-right">{{ $invoice->formatCurrency($invoice->total_amount) }}</td>
-            </tr>
-
-            {{-- ABONOS Y SALDO PENDIENTE --}}
-            @if($totalAbonado > 0)
-                <tr>
-                    <td colspan="{{ $invoice->table_columns - 1 }}" class="text-right text-green font-bold">🧾 Total Abonado</td>
-                    <td class="text-right text-green">- {{ $invoice->formatCurrency($totalAbonado) }}</td>
-                </tr>
-                <tr>
-                    <td colspan="{{ $invoice->table_columns - 1 }}" class="text-right text-red font-bold">💰 Saldo Pendiente</td>
-                    <td class="text-right text-red">{{ $invoice->formatCurrency($saldoPendiente) }}</td>
-                </tr>
+   {{-- TABLA DE ITEMS --}}
+<table class="table section">
+    <thead>
+        <tr>
+            <th>Descripción</th>
+            @if($invoice->hasItemUnits)
+                <th>Unidad</th>
             @endif
-        </tbody>
-    </table>
+            <th>Cantidad</th>
+            <th class="text-right">Precio Unitario</th>
+            <th class="text-right">Subtotal</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach($invoice->items as $item)
+            <tr>
+                <td>{{ $item->title }}</td>
+                @if($invoice->hasItemUnits)
+                    <td>{{ $item->units }}</td>
+                @endif
+                <td>{{ $item->quantity }}</td>
+                <td class="text-right">{{ $invoice->formatCurrency($item->price_per_unit) }}</td>
+                <td class="text-right">{{ $invoice->formatCurrency($item->sub_total_price) }}</td>
+            </tr>
+        @endforeach
 
-    {{-- NOTAS --}}
-    <div class="footer-info">
-        @if($invoice->notes)
-            <p><strong>Notas:</strong> {{ $invoice->notes }}</p>
-        @endif
+        {{-- TOTAL --}}
+        <tr class="total-row">
+            <td colspan="{{ $invoice->table_columns - 1 }}" class="text-right">Total</td>
+            <td class="text-right">{{ $invoice->formatCurrency($invoice->total_amount) }}</td>
+        </tr>
 
-        <p><strong>Valor en letras:</strong> {{ $invoice->getTotalAmountInWords() }}</p>
-        <p><strong>Fecha límite de pago:</strong> {{ $invoice->getPayUntilDate() }}</p>
+       {{-- DETALLE DE ABONOS --}}
+@if($venta && $venta->abonos->count() > 0)
+    {{-- Encabezado --}}
+    <tr>
+        <td colspan="{{ $invoice->table_columns }}" style="background-color:#F3F4F6; font-weight:bold;">
+            📌 Detalle de Abonos
+        </td>
+    </tr>
+
+    {{-- Lista de abonos con fecha --}}
+@foreach($venta->abonos as $abono)
+    <tr>
+        {{-- Fecha del abono --}}
+        <td>
+            📅 {{ \Carbon\Carbon::parse($abono->fecha_abono)->format('d/m/Y') }}
+        </td>
+        {{-- Texto "Abono" --}}
+        <td colspan="{{ $invoice->table_columns - 2 }}">
+            💵 Abono
+        </td>
+        {{-- Monto del abono --}}
+        <td class="text-right text-green font-bold">
+            {{ $invoice->formatCurrency($abono->monto) }}
+        </td>
+    </tr>
+@endforeach
+        
+@endif
+{{-- ABONOS Y SALDO PENDIENTE --}}
+@if($totalAbonado > 0)
+    {{-- Total Abonado --}}
+    <tr style="background-color:#F3F4F6;">
+        <td colspan="{{ $invoice->table_columns - 1 }}" class="text-right text-green font-bold">
+            🧾 Total Abonado
+        </td>
+        <td class="text-right text-green">
+            - {{ $invoice->formatCurrency($totalAbonado) }}
+        </td>
+    </tr>
+
+    {{-- Saldo pendiente --}}
+    <tr style="background-color:#F3F4F6;">
+        <td colspan="{{ $invoice->table_columns - 1 }}" class="text-right text-red font-bold">
+            💰 Saldo Pendiente
+        </td>
+        <td class="text-right text-red">
+            {{ $invoice->formatCurrency($saldoPendiente) }}
+        </td>
+    </tr>
+@endif
+
+
+
+    </tbody>
+</table>
+
+{{-- NOTAS --}}
+<div class="footer-info">
+    @if($invoice->notes)
+        <p><strong>Notas:</strong> {{ $invoice->notes }}</p>
+    @endif
+
+    @php
+        $formatter = new \NumberFormatter('es_CO', \NumberFormatter::SPELLOUT);
+        $entero = floor($invoice->total_amount);
+        $centavos = round(($invoice->total_amount - $entero) * 100);
+        $valorEnLetras = ucfirst($formatter->format($entero));
+
+        // Si termina en "millón" o "millones", agregar "de"
+        if (preg_match('/(millón|millones)$/i', $valorEnLetras)) {
+            $valorEnLetras .= ' de';
+        }
+
+        $centavosEnLetras = $centavos > 0
+            ? ' con ' . $formatter->format($centavos) . ' centavos'
+            : '';
+    @endphp
+
+    <p><strong>Valor en letras:</strong> {{ $valorEnLetras }} pesos{{ $centavosEnLetras }}</p>
+    <p><strong>Fecha límite de pago:</strong> {{ $invoice->getPayUntilDate() }}</p>
+</div>
+
     </div>
 
 </body>

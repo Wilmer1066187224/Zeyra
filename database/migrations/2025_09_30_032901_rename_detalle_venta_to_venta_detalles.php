@@ -11,12 +11,8 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('ventas', function (Blueprint $table) {
-            $table->id();    
-            $table->foreignId('cliente_id')->constrained('clientes')->onDelete('cascade');
-            $table->decimal('total', 12, 2);
-            $table->date('fecha_venta');
-            $table->timestamps();
+        Schema::table('detalle_venta','venta_detalles' , function (Blueprint $table) {
+            //
         });
     }
 
@@ -25,6 +21,8 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('ventas');
+        Schema::table('detalle_venta','detalle_venta' , function (Blueprint $table) {
+            //
+        });
     }
 };

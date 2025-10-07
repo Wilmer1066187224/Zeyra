@@ -64,20 +64,54 @@
                 </div>
             @endif
 
+            <!-- Tarjetas de Ventas por Día / Mes / Año -->
+<div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <!-- Día -->
+    <div class="bg-gradient-to-r from-green-100 to-green-200 text-green-800 p-4 rounded-xl shadow hover:shadow-lg transition">
+        <h3 class="text-lg font-semibold">📅 Ventas del Día</h3>
+        <p class="text-2xl font-bold">$ {{ number_format($ventas_hoy, 2, ',', '.') }}</p>
+        <p class="text-sm mt-1 {{ $variacion_dia >= 0 ? 'text-green-600' : 'text-red-600' }}">
+            {{ $variacion_dia >= 0 ? '▲' : '▼' }} {{ number_format($variacion_dia, 1) }}% respecto a ayer
+        </p>
+    </div>
+
+    <!-- Mes -->
+    <div class="bg-gradient-to-r from-blue-100 to-blue-200 text-blue-800 p-4 rounded-xl shadow hover:shadow-lg transition">
+        <h3 class="text-lg font-semibold">📆 Ventas del Mes</h3>
+        <p class="text-2xl font-bold">$ {{ number_format($ventas_mes, 2, ',', '.') }}</p>
+        <p class="text-sm mt-1 {{ $variacion_mes >= 0 ? 'text-green-600' : 'text-red-600' }}">
+            {{ $variacion_mes >= 0 ? '▲' : '▼' }} {{ number_format($variacion_mes, 1) }}% respecto al mes pasado
+        </p>
+    </div>
+
+    <!-- Año -->
+    <div class="bg-gradient-to-r from-purple-100 to-purple-200 text-purple-800 p-4 rounded-xl shadow hover:shadow-lg transition">
+        <h3 class="text-lg font-semibold">📈 Ventas del Año</h3>
+        <p class="text-2xl font-bold">$ {{ number_format($ventas_anio, 2, ',', '.') }}</p>
+        <p class="text-sm mt-1 {{ $variacion_anio >= 0 ? 'text-green-600' : 'text-red-600' }}">
+            {{ $variacion_anio >= 0 ? '▲' : '▼' }} {{ number_format($variacion_anio, 1) }}% respecto al año anterior
+        </p>
+    </div>
+</div>
+
+
             <!-- Reporte de Inventario -->
             <div class="max-w-7xl mx-auto">
                 <h2 class="text-2xl font-bold mb-6">📈 Reporte de Inventario</h2>
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <div class="bg-green-100 text-green-800 p-4 rounded shadow">
-                        <h3 class="text-lg font-semibold">💰 Total Compras</h3>
-                        <p class="text-2xl font-bold">$ {{ number_format($total_compras ?? 0, 2, ',', '.') }}</p>
-                    </div>
-                    <div class="bg-blue-100 text-blue-800 p-4 rounded shadow">
-                        <h3 class="text-lg font-semibold">💵 Total Ventas</h3>
-                        <p class="text-2xl font-bold">$ {{ number_format($total_ventas ?? 0, 2, ',', '.') }}</p>
-                    </div>
-                </div>
+    <div class="bg-green-100 text-green-800 p-4 rounded shadow">
+        <h3 class="text-lg font-semibold">💰 Total Compras</h3>
+        <p class="text-2xl font-bold">$ {{ number_format($total_compras ?? 0, 2, ',', '.') }}</p>
+    </div>
+    <div class="bg-blue-100 text-blue-800 p-4 rounded shadow">
+        <h3 class="text-lg font-semibold">💵 Total Ventas</h3>
+        <p class="text-2xl font-bold">$ {{ number_format($total_ventas ?? 0, 2, ',', '.') }}</p>
+    </div>
+</div>
+
+
+
                 
 <!-- Top 5 Clientes -->
 <div class="mt-8">
@@ -228,4 +262,20 @@
             }]
         }
     });
+    document.querySelectorAll('.text-2xl.font-bold').forEach(el => {
+    const value = parseFloat(el.textContent.replace(/[^0-9.-]+/g, ""));
+    let start = 0;
+    const duration = 1500;
+    const step = value / (duration / 16);
+
+    const counter = setInterval(() => {
+        start += step;
+        if (start >= value) {
+            el.textContent = "$ " + value.toLocaleString('es-CO', { minimumFractionDigits: 2 });
+            clearInterval(counter);
+        } else {
+            el.textContent = "$ " + Math.floor(start).toLocaleString('es-CO', { minimumFractionDigits: 2 });
+        }
+    }, 16);
+});
 </script>

@@ -214,6 +214,7 @@
         
 @endif
 {{-- ABONOS Y SALDO PENDIENTE --}}
+{{-- ABONOS Y SALDO PENDIENTE --}}
 @if($totalAbonado > 0)
     {{-- Total Abonado --}}
     <tr style="background-color:#F3F4F6;">
@@ -243,9 +244,7 @@
 
 {{-- NOTAS --}}
 <div class="footer-info">
-    @if($invoice->notes)
-        <p><strong>Notas:</strong> {{ $invoice->notes }}</p>
-    @endif
+    <p>Gracias por su compra.</p>
 
     @php
         $formatter = new \NumberFormatter('es_CO', \NumberFormatter::SPELLOUT);
@@ -264,8 +263,9 @@
     @endphp
 
     <p><strong>Valor en letras:</strong> {{ $valorEnLetras }} pesos{{ $centavosEnLetras }}</p>
-    <p><strong>Fecha límite de pago:</strong> {{ $invoice->getPayUntilDate() }}</p>
+    {{-- <p><strong>Fecha límite de pago:</strong> {{ $invoice->getPayUntilDate() }}</p> --}}
 </div>
+
 
     </div>
 

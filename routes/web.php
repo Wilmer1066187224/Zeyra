@@ -31,9 +31,8 @@ use App\Http\Controllers\ProveedorController;
 */
 
 Route::get('/', function () {
-    return view('welcome');
+    return redirect()->route('login');
 });
-
 
 Route::get('/dashboard', function () {
     return view('dashboard');
@@ -52,14 +51,16 @@ Route::resource('categorias', CategoriaController::class)->middleware(['auth']);
 Route::resource('movimientos', MovimientoController::class)->middleware(['auth']);
 Route::resource('compras', CompraController::class)->middleware(['auth']);
 
+
+Route::get('ventas/export', [VentaController::class, 'export'])->name('ventas.export');
 Route::resource('ventas', VentaController::class)->middleware(['auth']);
 Route::get('/ventas/{venta}/factura',[VentaController::class, 'generarFactura'])->name('ventas.factura');// web.php
 Route::get('/ventas/{venta}', [VentaController::class, 'show'])->name('ventas.show');
 
 
-Route::get('/ventas/export', function () {
-    return Excel::download(new VentasExport, 'ventas.xlsx');
-})->name('ventas.export');
+
+
+Route::get('ventas/export', [VentaController::class, 'export'])->name('ventas.export');
 
 
 Route::get('/reportes/inventario', [ReporteController::class, 'inventario'])->name('reportes.inventario');
@@ -85,19 +86,37 @@ Route::view('/sin-permiso', 'errors.permission')->name('permission.denied');
 Route::get('/prohibido', function () {
     abort(403);
 });
-Route::patch('/notificaciones/{id}', function ($id) {
-    auth()->user()->unreadNotifications->where('id', $id)->markAsRead();
-    return back();
-})->name('notificaciones.leer')->middleware('auth');
 
+
+/*
+|--------------------------------------------------------------------------
+| Rutas de Notificaciones
+|--------------------------------------------------------------------------
+*/
 
 Route::post('/notificaciones/{id}/leida', function ($id, Request $request) {
+    // Buscar la notificación del usuario
     $notificacion = $request->user()->notifications()->findOrFail($id);
+
+    // Marcarla como leída
     $notificacion->markAsRead();
 
     return back();
 })->middleware('auth')->name('notificaciones.marcarLeida');
-Route::view('/notificaciones', 'notificaciones.index')->middleware('auth');
+
+// Vista principal de notificaciones
+Route::view('/notificaciones', 'notificaciones.index')
+    ->middleware('auth')
+    ->name('notificaciones.index');
+
+// Ruta para marcar TODAS como leídas (opcional)
+Route::post('/notificaciones/marcar-todas', function (Request $request) {
+    $request->user()->unreadNotifications->markAsRead();
+
+    return back();
+})->middleware('auth')->name('notificaciones.marcarTodas');
+
+
 
 Route::get('/devoluciones/crear', [DevolucionController::class, 'create'])->name('devoluciones.create');
 Route::post('/devoluciones', [DevolucionController::class, 'store'])->name('devoluciones.store');

@@ -14,36 +14,53 @@ use LaravelDaily\Invoices\Classes\InvoiceItem;
 use LaravelDaily\Invoices\Classes\Party;
 use Carbon\Carbon;
 use App\Models\VentaDetalle;
+use App\Exports\VentasExport;
+use Maatwebsite\Excel\Facades\Excel;
+use App\Notifications\StockBajoNotification;
+use Illuminate\Support\Facades\Auth;
+
+
 class VentaController extends Controller
 {
     /**
      * Listar ventas con filtros.
      */
-    public function index(Request $request)
-    {
-        $query = Venta::with(['detalles.producto', 'cliente'])->latest('fecha_venta');
+  public function index(Request $request)
+{
+    $query = Venta::with(['detalles.producto', 'cliente'])
+                  ->orderBy('created_at', 'desc'); // 👈 ventas más recientes primero
 
-        if ($request->filled('cliente')) {
-            $query->whereHas('cliente', function ($q) use ($request) {
-                $q->where('nombre', 'like', '%' . $request->cliente . '%');
-            });
-        }
-
-        if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
-            $query->whereBetween('fecha_venta', [
-                $request->fecha_inicio . ' 00:00:00',
-                $request->fecha_fin . ' 23:59:59'
-            ]);
-        } elseif ($request->filled('fecha_inicio')) {
-            $query->whereDate('fecha_venta', '>=', $request->fecha_inicio);
-        } elseif ($request->filled('fecha_fin')) {
-            $query->whereDate('fecha_venta', '<=', $request->fecha_fin);
-        }
-
-        $ventas = $query->paginate(10)->appends($request->all());
-
-        return view('ventas.index', compact('ventas'));
+    // Filtro por cliente
+    if ($request->filled('cliente')) {
+        $query->whereHas('cliente', function ($q) use ($request) {
+            $q->where('nombre', 'like', '%' . $request->cliente . '%');
+        });
     }
+
+    // Filtro por fechas
+    if ($request->filled('fecha_inicio') && $request->filled('fecha_fin')) {
+        $query->whereBetween('fecha_venta', [
+            $request->fecha_inicio . ' 00:00:00',
+            $request->fecha_fin . ' 23:59:59'
+        ]);
+    } elseif ($request->filled('fecha_inicio')) {
+        $query->whereDate('fecha_venta', '>=', $request->fecha_inicio);
+    } elseif ($request->filled('fecha_fin')) {
+        $query->whereDate('fecha_venta', '<=', $request->fecha_fin);
+    }
+
+    // Filtro por número de factura
+    if ($request->filled('numero_factura')) {
+        $query->where('numero_factura', 'like', '%' . $request->numero_factura . '%');
+    }
+
+    // Paginación
+    $ventas = $query->paginate(10)->appends($request->all());
+
+    return view('ventas.index', compact('ventas'));
+}
+
+
 
     /**
      * Formulario para crear una nueva venta.
@@ -92,10 +109,15 @@ public function store(Request $request)
                 'precio_unitario' => $producto['precio_unitario'],
                 'subtotal' => $subtotal, // ✅ ahora sí coincide con la BD
             ]);
+                // 🔄 Descontar del inventario
+                $productoModel = Producto::find($producto['producto_id']);
+                $productoModel->decrement('stock', $producto['cantidad']);
 
-            // 🔄 Descontar del inventario (opcional)
-            Producto::where('id', $producto['producto_id'])
-                ->decrement('stock', $producto['cantidad']);
+                // ⚠️ Si el stock queda bajo, enviar notificación
+                if ($productoModel->stock <= 24) { // <-- aquí defines el límite
+                    Auth::user()->notify(new StockBajoNotification($productoModel));
+                }
+
         }
 
         // 3️⃣ Actualizar total de la venta
@@ -200,4 +222,10 @@ public function store(Request $request)
         $numero = $ultimo ? (int) substr($ultimo->numero, -4) + 1 : 1;
         return 'FAC-' . str_pad($numero, 4, '0', STR_PAD_LEFT);
     }
+
+  public function export()
+{
+    $fileName = 'Ventas_' . now()->format('Y-m-d_H-i-s') . '.xlsx';
+    return Excel::download(new VentasExport, $fileName);
+}
 }

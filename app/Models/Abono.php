@@ -14,4 +14,5 @@ class Abono extends Model
     {
         return $this->belongsTo(Venta::class);
     }
+    
 }

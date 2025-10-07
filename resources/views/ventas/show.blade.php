@@ -11,8 +11,8 @@
             {{-- Información general --}}
             <div>
                 <h3 class="text-lg font-semibold text-gray-700 mb-2">🧾 Información de la Venta</h3>
-                <p><strong>Cliente:</strong> {{ $venta->cliente->nombre }}</p>
-                <p><strong>Producto:</strong> {{ $venta->producto->nombre }}</p>
+                <p><strong>Cliente:</strong> {{ $venta->cliente?->nombre ?? 'Sin cliente' }}</p>
+                <p><strong>Producto:</strong> {{ $venta->producto?->nombre ?? 'Sin producto' }}</p>
                 <p><strong>Cantidad:</strong> {{ $venta->cantidad }}</p>
                 <p><strong>Precio Unitario:</strong> ${{ number_format($venta->precio_unitario, 2) }}</p>
                 <p><strong>Total:</strong> ${{ number_format($venta->total, 2) }}</p>
@@ -37,6 +37,7 @@
             @endif
 
             {{-- Registrar abono --}}
+            @if($venta->saldo_pendiente > 0)
             <div>
                 <h3 class="text-lg font-semibold text-gray-700 mb-2">💵 Registrar Abono</h3>
                 <form action="{{ route('abonos.store') }}" method="POST" class="space-y-4">
@@ -45,7 +46,7 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Monto</label>
-                        <input type="number" name="monto" required min="1" step="0.01"
+                        <input type="number" name="monto" required min="1" max="{{ $venta->saldo_pendiente }}" step="0.01"
                             class="form-input w-full mt-1 rounded-md border-gray-300 shadow-sm">
                     </div>
 
@@ -57,8 +58,7 @@
 
                     <div>
                         <label class="block text-sm font-medium text-gray-700">Fecha del abono</label>
-                        <input type="date" name="fecha_abono"
-                            value="{{ now()->format('Y-m-d') }}"
+                        <input type="date" name="fecha_abono" value="{{ now()->format('Y-m-d') }}"
                             class="form-input w-full mt-1 rounded-md border-gray-300 shadow-sm">
                     </div>
 
@@ -68,6 +68,9 @@
                     </button>
                 </form>
             </div>
+            @else
+            <p class="text-green-700 font-semibold">✅ Esta venta ya está completamente pagada.</p>
+            @endif
 
             {{-- Historial de abonos --}}
             @if($venta->abonos->count())
@@ -95,13 +98,12 @@
                     </div>
                 </div>
             @endif
-                     {{-- Botón Regresar --}}
-    <a href="{{ route('ventas.index') }}"
-       class="inline-flex items-center px-4 py-2 mt-6 bg-gray-600 text-white rounded shadow hover:bg-gray-700 transition">
-        <i class="fas fa-arrow-left mr-2"></i> Regresar
-    </a>
-        </div>
-   
 
+            {{-- Botón Regresar --}}
+            <a href="{{ route('ventas.index') }}"
+               class="inline-flex items-center px-4 py-2 mt-6 bg-gray-600 text-white rounded shadow hover:bg-gray-700 transition">
+                <i class="fas fa-arrow-left mr-2"></i> Regresar
+            </a>
+        </div>
     </div>
 </x-app-layout>

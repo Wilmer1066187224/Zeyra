@@ -7,7 +7,7 @@ use Illuminate\Http\Request;
 
 class AbonoController extends Controller
 {
-    public function store(Request $request)
+  public function store(Request $request)
 {
     $request->validate([
         'venta_id' => 'required|exists:ventas,id',
@@ -26,5 +26,6 @@ class AbonoController extends Controller
     return redirect()->route('ventas.show', $request->venta_id)
         ->with('success', 'Abono registrado correctamente.');
 }
+
 
 }

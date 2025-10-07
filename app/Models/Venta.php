@@ -11,37 +11,49 @@ class Venta extends Model
 
     protected $fillable = [
         'cliente_id',
+        'producto_id',
+        'cantidad',
+        'precio_unitario',
         'total',
         'fecha_venta',
-        'numero_factura', // 👈 nuevo
+        'numero_factura'
     ];
 
+    /**
+     * Casts para convertir automáticamente atributos
+     */
+    protected $casts = [
+        'fecha_venta'      => 'datetime',
+        'cantidad'         => 'integer',
+        'precio_unitario'  => 'decimal:2',
+        'total'            => 'decimal:2',
+    ];
 
-  
-   // Una venta pertenece a un producto
+    // Relación: Una venta pertenece a un producto
     public function producto()
     {
         return $this->belongsTo(Producto::class);
     }
 
-    // Una venta pertenece a un cliente
+    // Relación: Una venta pertenece a un cliente
     public function cliente()
     {
         return $this->belongsTo(Cliente::class);
     }
 
-    // Una venta puede tener una factura
+    // Relación: Una venta puede tener una factura
     public function factura()
     {
         return $this->hasOne(Factura::class);
     }
 
-    // Una venta puede tener muchas devoluciones
+    // Relación: Una venta puede tener muchas devoluciones
     public function devoluciones()
     {
         return $this->hasMany(Devolucion::class);
     }
-        public function abonos()
+
+    public function abonos()
     {
         return $this->hasMany(Abono::class);
     }
@@ -55,13 +67,20 @@ class Venta extends Model
     {
         return $this->total - $this->total_abonado;
     }
-//     public function detalle()
-// {
-//     return $this->hasMany(DetalleVenta::class);
-// }
-public function detalles()
-{
-    return $this->hasMany(VentaDetalle::class);
-}
 
+    public function detalles()
+    {
+        return $this->hasMany(VentaDetalle::class);
     }
+
+    protected static function booted()
+    {
+        static::creating(function ($venta) {
+            if (!$venta->numero_factura) {
+                $lastVenta = Venta::latest('id')->first();
+                $nextNumber = $lastVenta ? $lastVenta->id + 1 : 1;
+                $venta->numero_factura = 'FAC-' . str_pad($nextNumber, 5, '0', STR_PAD_LEFT);
+            }
+        });
+    }
+}

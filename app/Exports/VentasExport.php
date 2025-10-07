@@ -5,39 +5,43 @@ namespace App\Exports;
 use App\Models\Venta;
 use Maatwebsite\Excel\Concerns\FromCollection;
 use Maatwebsite\Excel\Concerns\WithHeadings;
-use Maatwebsite\Excel\Concerns\WithMapping;
 
-class VentasExport implements FromCollection, WithHeadings, WithMapping
+class VentasExport implements FromCollection, WithHeadings
 {
     public function collection()
     {
-        // Trae ventas con cliente y producto
-        return Venta::with(['cliente', 'producto'])->orderBy('fecha_venta', 'desc')->get();
+        $ventas = Venta::with(['cliente', 'detalles.producto'])->orderBy('fecha_venta', 'desc')->get();
+
+        $rows = [];
+        foreach ($ventas as $venta) {
+            foreach ($venta->detalles as $detalle) {
+                $rows[] = [
+                    'ID Venta'       => $venta->id,
+                    'Cliente'        => $venta->cliente ? $venta->cliente->nombre : 'N/A',
+                    'Producto'       => $detalle->producto ? $detalle->producto->nombre : 'N/A',
+                    'Cantidad'       => $detalle->cantidad,
+                    'Precio Unitario'=> number_format($detalle->precio_unitario, 2, ',', '.'),
+                    'Subtotal'       => number_format($detalle->subtotal, 2, ',', '.'),
+                    'Total Venta'    => number_format($venta->total, 2, ',', '.'),
+                    'Fecha de Venta' => $venta->fecha_venta->format('d/m/Y'),
+                ];
+            }
+        }
+
+        return collect($rows);
     }
 
     public function headings(): array
     {
         return [
-            'ID',
+            'ID Venta',
             'Cliente',
             'Producto',
             'Cantidad',
             'Precio Unitario',
-            'Total',
-            'Fecha de Venta'
-        ];
-    }
-
-    public function map($venta): array
-    {
-        return [
-            $venta->id,
-            $venta->cliente ? $venta->cliente->nombre : 'N/A',
-            $venta->producto ? $venta->producto->nombre : 'N/A',
-            $venta->cantidad,
-            number_format($venta->precio_unitario, 2, ',', '.'),
-            number_format($venta->total, 2, ',', '.'),
-            $venta->fecha_venta->format('d/m/Y')
+            'Subtotal',
+            'Total Venta',
+            'Fecha de Venta',
         ];
     }
 }
